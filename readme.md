@@ -5,7 +5,7 @@
 IPv4 和 IPv6 的推荐命令分别为
 ```bash
 go run ./cmd/mcis --budget 500 --concurrency 50 --heads 8 --beam 32 -v --out text --sni example.com --host-header example.com --cidr-file .\ipv4cidr.txt
-go run ./cmd/mcis --budget 1000 --concurrency 50 --heads 10 --beam 32 -v --out text --sni example.com --host-header example.com --cidr-file .\ipv6-cidr.txt
+go run ./cmd/mcis --budget 2000 --concurrency 100 --heads 8 --beam 32 -v --out text --sni example.com --host-header example.com --cidr-file .\ipv6-cidr.txt
 ```
 
 ## 特色
