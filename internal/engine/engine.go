@@ -182,8 +182,39 @@ func (e *Engine) submitOneTask(ctx context.Context, headID int) error {
 		return nil
 	}
 
-	// Select prefix using Thompson Sampling with diversity
-	prefix := e.headManager.SelectNextPrefix(head, e.tree, e.cfg.Beam)
+	var prefix netip.Prefix
+
+	// Exploitation mode: directly sample from known-good prefixes
+	// This ensures we find multiple IPs from the best regions
+	completed := atomic.LoadInt64(&e.completed)
+	budget := int64(e.cfg.Budget)
+
+	// Gradually increase exploitation rate as we progress
+	// Early: 20% exploit, Late: 50% exploit
+	exploitRate := 0.2 + 0.3*float64(completed)/float64(budget)
+	if exploitRate > 0.5 {
+		exploitRate = 0.5
+	}
+
+	if completed > 30 { // Only after initial exploration
+		exploitPrefixes := e.getExploitationPrefixes()
+		if len(exploitPrefixes) > 0 && head.Sampler != nil {
+			if r := head.Sampler.SampleUniform(); r < exploitRate {
+				// Pick a random prefix from exploit list, weighted toward better ones
+				idx := int(r / exploitRate * float64(len(exploitPrefixes)))
+				if idx >= len(exploitPrefixes) {
+					idx = len(exploitPrefixes) - 1
+				}
+				prefix = exploitPrefixes[idx]
+			}
+		}
+	}
+
+	// If not exploiting, use Thompson Sampling with diversity
+	if !prefix.IsValid() {
+		prefix = e.headManager.SelectNextPrefix(head, e.tree, e.cfg.Beam)
+	}
+
 	if !prefix.IsValid() {
 		// Fallback to any leaf
 		leaves := e.tree.LeafNodes()
@@ -283,6 +314,46 @@ func (e *Engine) trySplit() {
 
 	// Periodically rebalance heads to explore new areas
 	e.headManager.RebalanceHeads(e.tree)
+}
+
+// getExploitationPrefixes returns prefixes that deserve intensive exploitation.
+// These are prefixes containing top-performing IPs that we should sample more from.
+// Returns prefixes sorted by best score (best first), with repeats for weighting.
+func (e *Engine) getExploitationPrefixes() []netip.Prefix {
+	topResults := e.topN.Snapshot()
+	if len(topResults) == 0 {
+		return nil
+	}
+
+	// Calculate thresholds
+	bestScore := topResults[0].ScoreMS
+	tier1Threshold := bestScore * 1.2  // Within 20% of best
+	tier2Threshold := bestScore * 1.5  // Within 50% of best
+
+	// Track best score per prefix
+	prefixBestScore := make(map[netip.Prefix]float64)
+	for _, r := range topResults {
+		if r.ScoreMS > tier2Threshold {
+			break
+		}
+		if _, exists := prefixBestScore[r.Prefix]; !exists {
+			prefixBestScore[r.Prefix] = r.ScoreMS
+		}
+	}
+
+	// Build weighted list: tier1 prefixes appear 3x, tier2 appear 1x
+	var exploitPrefixes []netip.Prefix
+	for prefix, score := range prefixBestScore {
+		if score <= tier1Threshold {
+			// Best prefixes get 3x weight
+			exploitPrefixes = append(exploitPrefixes, prefix, prefix, prefix)
+		} else {
+			// Good prefixes get 1x weight
+			exploitPrefixes = append(exploitPrefixes, prefix)
+		}
+	}
+
+	return exploitPrefixes
 }
 
 // sampleIPWithDedup samples an IP with deduplication.
