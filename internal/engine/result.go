@@ -30,11 +30,11 @@ type ProbeResult struct {
 
 // TopResult is the public result type for output.
 type TopResult struct {
-	IP     netip.Addr        `json:"ip"`
-	Prefix netip.Prefix      `json:"prefix"`
-	OK     bool              `json:"ok"`
-	Status int               `json:"status"`
-	Error  string            `json:"error,omitempty"`
+	IP     netip.Addr   `json:"ip"`
+	Prefix netip.Prefix `json:"prefix"`
+	OK     bool         `json:"ok"`
+	Status int          `json:"status"`
+	Error  string       `json:"error,omitempty"`
 
 	ConnectMS int64             `json:"connect_ms"`
 	TLSMS     int64             `json:"tls_ms"`
@@ -115,6 +115,7 @@ func (c *TopNCollector) Consider(r TopResult) {
 		if r.ScoreMS < c.heap.items[idx].ScoreMS {
 			c.heap.items[idx] = r
 			heap.Fix(c.heap, idx)
+			c.rebuildIPMap()
 		}
 		return
 	}
@@ -199,4 +200,3 @@ func (c *TopNCollector) Len() int {
 func ConvertToSearchTopResults(results []TopResult) []TopResult {
 	return results
 }
-
