@@ -299,4 +299,3 @@ func (p *CloudflareProvider) createRecord(ctx context.Context, name, recordType,
 
 	return nil
 }
-

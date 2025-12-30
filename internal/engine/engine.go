@@ -327,8 +327,8 @@ func (e *Engine) getExploitationPrefixes() []netip.Prefix {
 
 	// Calculate thresholds
 	bestScore := topResults[0].ScoreMS
-	tier1Threshold := bestScore * 1.2  // Within 20% of best
-	tier2Threshold := bestScore * 1.5  // Within 50% of best
+	tier1Threshold := bestScore * 1.2 // Within 20% of best
+	tier2Threshold := bestScore * 1.5 // Within 50% of best
 
 	// Track best score per prefix
 	prefixBestScore := make(map[netip.Prefix]float64)

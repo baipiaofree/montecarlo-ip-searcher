@@ -298,4 +298,3 @@ func (t *ArmTree) TotalSamples() int {
 	}
 	return total
 }
-

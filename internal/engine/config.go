@@ -197,4 +197,3 @@ func (r *Request) TimeoutMS() float64 {
 	}
 	return float64(r.Probe.Timeout / time.Millisecond)
 }
-
