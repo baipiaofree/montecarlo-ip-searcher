@@ -40,6 +40,7 @@ go run ./cmd/mcis -v --out text --cidr-file ./ipv6cidr.txt
 - **层次化统计**：每个前缀维护独立的贝叶斯后验分布，支持快速识别优质子网。
 - **IPv4 / IPv6 同时支持**：CIDR 解析、拆分、采样、探测全流程支持 v4/v6 混合输入。
 - **强制直连探测**：即使系统/环境变量配置了代理，本工具也会**忽略 `HTTP_PROXY/HTTPS_PROXY/NO_PROXY`**，确保测速不被代理污染。
+- **多次测试取平均**：每个IP默认测试6次，跳过第1次（包含TCP/TLS握手开销），取第2-6次的平均延迟，提供更稳定准确的测量结果。
 - **探测方式**：默认对 `https://example.com/cdn-cgi/trace` 发起请求，域名可用 `--host` 覆盖，也可分别用 `--sni` / `--host-header` 覆盖 tls sni 和 http Host header ；路径可使用 `--path` 覆盖。
 - **输出格式**：支持 `jsonl` / `csv` / `text`。
 - **DNS 上传功能**：搜索和测速完成后，可将优选 IP 自动上传到 DNS 服务商（支持 Cloudflare 和 Vercel），作为同一子域名的多条 A/AAAA 记录，实现自动化部署。
@@ -71,7 +72,7 @@ go run ./cmd/mcis -v --out text --cidr-file ./ipv6cidr.txt
 - `--budget`：总探测次数（越大越稳，但更耗时）
 - `--concurrency`：并发探测数量
 - `--top`：输出 Top N IP
-- `--timeout`：单次探测超时（如 `2s` / `3s`）
+- `--timeout`：单次探测超时（如 `2s` / `3s`，注意：总超时时间 = 单次超时 × 测试次数）
 - `--heads`：多头数量（分散探索）
 - `--beam`：每个 head 保留的候选前缀数量（越大越“发散”）
 - `--min-samples-split`：前缀至少采样多少次才允许下钻拆分（默认 5）
@@ -84,6 +85,8 @@ go run ./cmd/mcis -v --out text --cidr-file ./ipv6cidr.txt
 - `--sni`：TLS SNI（已弃用：推荐用 `--host`）
 - `--host-header`：HTTP Host（已弃用：推荐用 `--host`）
 - `--path`：请求路径（默认 `/cdn-cgi/trace`）
+- `--rounds`：每个IP的测试次数（默认 6，建议保持默认值）
+- `--skip-first`：计算平均值时跳过前N次测试（默认 1，跳过第1次握手开销）
 - `--out`：输出格式 `jsonl|csv|text`
 - `--out-file`：输出到文件（默认 stdout）
 - `--seed`：随机种子（0 表示使用时间种子）
